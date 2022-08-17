@@ -50,11 +50,16 @@
             :visible.sync="dialogVisible"
             width="50%"
             :before-close="handleClose">
-            <el-form ref="form" :model="form" label-width="150px">
+            <el-form ref="form" :model="form" status-icon :rules="rules" label-width="150px">
                 
-                <el-form-item label="密码" :rules="[{ required: true, message: '请输入密码', trigger: 'blur' },]" >
-                    <el-input v-model="form.password" ></el-input>
+                <el-form-item label="密码" prop="password" >
+                    <el-input type="password" v-model="form.password" ></el-input>
                 </el-form-item>
+
+                <el-form-item label="确认密码" prop="checkPass">
+                    <el-input type="password" v-model="form.checkPass" autocomplete="off"></el-input>
+                </el-form-item>
+
                 <el-form-item label="目的钱包地址" :rules="[{ required: true, message: '请输入目的钱包地址', trigger: 'blur' },]">
                     <el-input v-model="form.wallets"></el-input>
                 </el-form-item>
@@ -65,7 +70,7 @@
             </el-form>
             <span slot="footer" class="dialog-footer">
                 <el-button @click="dialogVisible = false">取 消</el-button>
-                <el-button type="primary" @click="onSubmit">确 定</el-button>
+                <el-button type="primary" @click="onSubmit('form')">确 定</el-button>
             </span>
         </el-dialog>
 
@@ -75,9 +80,29 @@
 import {transferMoney,transferListByHistory} from '../../api'
 export default {
     data(){
+
+        var validatePass = (rule, value, callback) => {
+        if (value === '') {
+          callback(new Error('请输入密码'));
+        } else {
+          if (this.form.checkPass !== '') {
+            this.$refs.form.validateField('checkPass');
+          }
+          callback();
+        }
+      };
+      var validatePass2 = (rule, value, callback) => {
+        if (value === '') {
+          callback(new Error('请再次输入密码'));
+        } else if (value !== this.form.password) {
+          callback(new Error('两次输入密码不一致!'));
+        } else {
+          callback();
+        }
+      };    
+
         return{
             tableData: [
-               
             ],
             dialogVisible: false,
             form: {
@@ -85,8 +110,15 @@ export default {
                 password: '',
                 srckey_paths: ''
             },
+            rules: {
+                    password: [
+                        { validator: validatePass, trigger: 'blur' }
+                    ],
+                    checkPass: [
+                        { validator: validatePass2, trigger: 'blur' }
+                    ],
+            },
             
-
         }
 
     },
@@ -101,10 +133,21 @@ export default {
           })
           .catch(_ => {});
       },
-      onSubmit(){
+     onSubmit(formName) {
         this.dialogVisible = false
-        this.transferMoney(this.form)
-        console.log(this.form.count)
+        console.log(formName);
+        this.$refs[formName].validate((valid) => {
+          if (valid) {
+            console.log('submit!!');
+            this.transferMoney(this.form)
+            console.log(this.form.count)
+
+          } else {  
+            console.log('error submit!!');
+            alert('输入信息错误,无法提交!!!');
+            return false;
+          }
+        });
       },
       // 转移金额
       async transferMoney(params){
@@ -117,6 +160,7 @@ export default {
         }else{
             this.$message.error(res.msg);
         }
+        this.transferListByHistory();
       },
       // 历史转移金额信息
       async transferListByHistory(){

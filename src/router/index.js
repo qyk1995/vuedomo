@@ -35,7 +35,7 @@ export default new VueRouter({
             children:[
                 {
                     path:"/wallet",
-                    component:Wallet
+                    component:()=>import("@/views/wallet/index.vue")
                 },
                 {
                     path:"/hotspot",
